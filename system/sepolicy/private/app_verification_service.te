@@ -1,0 +1,4 @@
+# App Verification Manager Service SELinux Policy
+# Defines the security context for the app verification service
+
+type app_verification_service, system_api_service, system_server_service, service_manager_type;
