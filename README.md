@@ -1,2 +1,78 @@
-# AOSP 11 App Verification System
-This is an overlay repository for AppVerificationManagerService.
+# Android 11 应用验证防御系统 (App Verification System)
+
+基于 AOSP 11 开发的系统级应用管控框架。该项目在 Android Framework 层实现了一套完整的应用启动拦截机制，并配套了图形化管理工具，支持白名单模式、断电持久化存储以及批量管理功能。
+
+## 🚀 核心功能 (Features)
+
+### 1. Framework 核心服务
+* **启动拦截**: 深入 `ActivityTaskManagerService` (ATMS) 核心流程，在应用启动前进行权限校验。未授权应用将直接抛出 `SecurityException` 阻止启动。
+* **双模式切换**:
+    * **禁用模式 (Disabled)**: 系统不做任何拦截，便于调试。
+    * **白名单模式 (Whitelist)**: 仅允许白名单内的应用启动，实现“默认拒绝”的安全策略。
+* **持久化存储**: 使用 `AtomicFile` + XML 机制 (`/data/system/app_verification_whitelist.xml`)，确保白名单数据在重启、断电后不丢失。
+* **权限控制**: 服务受 `android.permission.MANAGE_APP_VERIFICATION` 保护，仅允许系统签名应用调用。
+
+### 2. 图形化管理工具 (AppVerifyManager)
+* **系统级应用**: 拥有 `platform` 签名，直接驻留于 `/system/priv-app/`。
+* **可视化管理**: 全中文界面，直观展示白名单列表，支持模式切换。
+* **批量导入**: 一键扫描设备上所有已安装应用并导入白名单（后台线程处理）。
+* **自动清理**: 自动检测并移除白名单中已卸载或无效的条目。
+
+---
+
+## 📂 项目结构 (Project Structure)
+
+本项目采用 Overlay 结构，目录路径与 AOSP 源码树保持一致，便于集成。
+
+```text
+AOSP11-AppVerificationSystem/
+├── frameworks/
+│   └── base/
+│       ├── core/java/android/app/
+│       │   ├── IAppVerificationManager.aidl    # [接口] AIDL 通信接口定义
+│       │   ├── AppVerificationInfo.java        # [数据] 跨进程传输实体类
+│       │   └── IAppVerificationManager.aidl    # [接口] 定义 8 个核心方法
+│       ├── core/res/AndroidManifest.xml        # [权限] 定义 MANAGE_APP_VERIFICATION 权限
+│       └── services/
+│           ├── core/java/com/android/server/app/
+│           │   └── AppVerificationManagerService.java # [核心] 服务实现逻辑、拦截、持久化
+│           └── java/com/android/server/
+│               └── SystemServer.java           # [入口] (需修改) 在此处注册服务
+├── packages/
+│   └── apps/
+│       └── AppVerifyManager/                   # [应用] 系统管理 App 源码
+│           ├── Android.bp                      # 编译脚本 (platform 签名)
+│           ├── AndroidManifest.xml             # 权限声明
+│           ├── src/                            # Java 源码 (MainActivity 包含批量逻辑)
+│           └── res/                            # UI 资源 (strings.xml 中文适配)
+└── system/
+    └── sepolicy/
+        └── private/
+            ├── app_verification_service.te     # [安全] SELinux 服务类型定义
+            ├── service_contexts                # [安全] 服务上下文注册
+            └── system_server.te                # [安全] 允许 system_server 添加服务
+
+
+🛠️ 集成指南 (Integration)
+将本项目文件复制到 AOSP 源码对应目录（建议使用脚本集成）。
+
+在 SystemServer.java 中添加服务启动代码。
+
+编译服务与应用：
+
+source build/envsetup.sh
+lunch aosp_x86_64-eng
+m services
+m AppVerifyManager
+重新打包镜像或推送 services.jar 与 APK 到设备。
+
+📊 版本记录
+v1.0 (Release):
+
+完成核心拦截功能与 XML 持久化。
+
+适配全中文 UI。
+
+新增“扫描所有应用”与“清理失效条目”功能。
+
+修复主题兼容性问题。

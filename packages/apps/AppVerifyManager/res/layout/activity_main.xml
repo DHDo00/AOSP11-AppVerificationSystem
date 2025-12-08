@@ -9,34 +9,69 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/mode_title"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#000000"/>
 
     <RadioGroup
         android:id="@+id/radioGroupMode"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="10dp">
+        android:orientation="vertical"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="15dp">
 
         <RadioButton
             android:id="@+id/rbDisabled"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/mode_disabled" />
+            android:text="@string/mode_disabled"
+            android:textSize="16sp"
+            android:padding="5dp"/>
 
         <RadioButton
             android:id="@+id/rbWhitelist"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/mode_whitelist" />
-
-        <RadioButton
-            android:id="@+id/rbSignature"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/mode_signature" />
+            android:text="@string/mode_whitelist"
+            android:textSize="16sp"
+            android:padding="5dp"/>
     </RadioGroup>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#CCCCCC"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/tools_title"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#000000"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="20dp">
+
+        <Button
+            android:id="@+id/btnImportAll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_import_all"
+            android:layout_marginBottom="5dp"/>
+
+        <Button
+            android:id="@+id/btnCleanInvalid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_clean_invalid"/>
+    </LinearLayout>
 
     <View
         android:layout_width="match_parent"
@@ -44,35 +79,17 @@
         android:background="#CCCCCC"
         android:layout_marginBottom="10dp"/>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/etPackageName"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="@string/add_hint" />
-
-        <Button
-            android:id="@+id/btnAdd"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_add" />
-    </LinearLayout>
-
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
         android:text="@string/whitelist_title"
-        android:textStyle="bold" />
+        android:textSize="14sp"
+        android:textColor="#666666"
+        android:layout_marginBottom="5dp"/>
 
     <ListView
         android:id="@+id/listViewApps"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"/>
 
 </LinearLayout>

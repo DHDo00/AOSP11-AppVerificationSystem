@@ -2,8 +2,11 @@ package com.android.appverify;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.app.IAppVerificationManager;
 import android.content.DialogInterface;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
@@ -12,21 +15,21 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
-// 为了避免 AppCompat 主题冲突，这里建议使用 Activity
-// 如果编译报错找不到 AppCompatActivity，修改 AndroidManifest.xml 的 theme 为 @android:style/Theme.DeviceDefault 即可
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 public class MainActivity extends Activity {
 
     private static final String TAG = "AppVerifyManager";
     private IAppVerificationManager mService;
     
     // UI 控件
-    private EditText mEtPackage;
     private ListView mListView;
     private ArrayAdapter<String> mAdapter;
     private final java.util.List<String> mWhitelistData = new java.util.ArrayList<>();
@@ -36,15 +39,12 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 1. 核心步骤：获取 Framework 服务代理
-        // "app_verification" 必须与 SystemServer.java 中注册的名字一致
         mService = IAppVerificationManager.Stub.asInterface(
                 ServiceManager.getService("app_verification"));
 
         if (mService == null) {
             Log.e(TAG, "Failed to connect to app_verification service");
             Toast.makeText(this, "Fatal: Service not found!", Toast.LENGTH_LONG).show();
-            // 此时服务未启动，无法继续
             return;
         }
 
@@ -53,16 +53,16 @@ public class MainActivity extends Activity {
     }
 
     private void initViews() {
-        mEtPackage = findViewById(R.id.etPackageName);
         mListView = findViewById(R.id.listViewApps);
-        Button btnAdd = findViewById(R.id.btnAdd);
         RadioGroup rgMode = findViewById(R.id.radioGroupMode);
+        Button btnImportAll = findViewById(R.id.btnImportAll);
+        Button btnCleanInvalid = findViewById(R.id.btnCleanInvalid);
 
-        // 初始化列表适配器
+        // 初始化列表
         mAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, mWhitelistData);
         mListView.setAdapter(mAdapter);
 
-        // 设置长按删除事件
+        // 长按删除功能
         mListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
@@ -72,85 +72,161 @@ public class MainActivity extends Activity {
             }
         });
 
-        // 设置添加按钮事件
-        btnAdd.setOnClickListener(new View.OnClickListener() {
+        // 批量导入
+        btnImportAll.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String pkg = mEtPackage.getText().toString().trim();
-                if (!pkg.isEmpty()) {
-                    addPackage(pkg);
-                }
+                performImportAll();
             }
         });
 
-        // 设置模式切换事件
+        // 清理无效条目
+        btnCleanInvalid.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                performCleanInvalid();
+            }
+        });
+
+        // 模式切换
         rgMode.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
-                int mode = 1; // Default Whitelist
-                if (checkedId == R.id.rbDisabled) mode = 0;
-                else if (checkedId == R.id.rbWhitelist) mode = 1;
-                else if (checkedId == R.id.rbSignature) mode = 2;
-                
+                int mode = 1; 
+                if (checkedId == R.id.rbDisabled) {
+                    mode = 0; // 禁用模式
+                } else if (checkedId == R.id.rbWhitelist) {
+                    mode = 1; // 启用模式 (原 Whitelist)
+                }
                 setMode(mode);
             }
         });
         
-        // 默认选中中间的白名单模式 (UI显示)
+        // 默认选中启用模式
         ((RadioButton)findViewById(R.id.rbWhitelist)).setChecked(true);
+    }
+
+    // ==========================================
+    // 核心业务逻辑
+    // ==========================================
+
+    private void performImportAll() {
+        final ProgressDialog dialog = ProgressDialog.show(this, "请稍候", 
+                getString(R.string.msg_importing), true);
+        
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                PackageManager pm = getPackageManager();
+                List<ApplicationInfo> installedApps = pm.getInstalledApplications(0);
+                
+                int count = 0;
+                try {
+                    List<String> currentWhitelist = mService.getWhitelistedApps();
+                    Set<String> whitelistSet = new HashSet<>(currentWhitelist);
+                    
+                    for (ApplicationInfo app : installedApps) {
+                        if (!whitelistSet.contains(app.packageName)) {
+                            mService.addToWhitelist(app.packageName);
+                            count++;
+                        }
+                    }
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Error during bulk import", e);
+                }
+                
+                final int finalCount = count;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        dialog.dismiss();
+                        String msg = getString(R.string.toast_import_success, finalCount);
+                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        refreshWhitelist();
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void performCleanInvalid() {
+        final ProgressDialog dialog = ProgressDialog.show(this, "请稍候", 
+                getString(R.string.msg_cleaning), true);
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                PackageManager pm = getPackageManager();
+                int count = 0;
+                try {
+                    List<String> whitelist = mService.getWhitelistedApps();
+                    for (String pkgName : whitelist) {
+                        try {
+                            pm.getPackageInfo(pkgName, 0);
+                        } catch (PackageManager.NameNotFoundException e) {
+                            mService.removeFromWhitelist(pkgName);
+                            count++;
+                            Log.i(TAG, "Cleaned invalid package: " + pkgName);
+                        }
+                    }
+                } catch (RemoteException e) {
+                    Log.e(TAG, "Error during clean up", e);
+                }
+
+                final int finalCount = count;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        dialog.dismiss();
+                        String msg = getString(R.string.toast_clean_success, finalCount);
+                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        refreshWhitelist();
+                    }
+                });
+            }
+        }).start();
     }
 
     private void refreshWhitelist() {
         if (mService == null) return;
         try {
-            // 调用 AIDL 获取列表
-            java.util.List<String> apps = mService.getWhitelistedApps();
+            List<String> apps = mService.getWhitelistedApps();
             mWhitelistData.clear();
             if (apps != null) {
                 mWhitelistData.addAll(apps);
             }
-            // 刷新 UI 必须在主线程 (虽然这里的 AIDL 调用是同步的，但在 Activity 中直接调就是主线程)
             mAdapter.notifyDataSetChanged();
         } catch (RemoteException e) {
             Log.e(TAG, "Error refreshing whitelist", e);
         }
     }
-
-    private void addPackage(String pkgName) {
-        try {
-            mService.addToWhitelist(pkgName);
-            mEtPackage.setText(""); // 清空输入框
-            Toast.makeText(this, "Added: " + pkgName, Toast.LENGTH_SHORT).show();
-            refreshWhitelist(); // 刷新列表查看结果
-        } catch (RemoteException e) {
-            Log.e(TAG, "Error adding package", e);
-            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
     
     private void showDeleteDialog(final String pkgName) {
+        String title = getString(R.string.dialog_delete_title);
+        String msg = getString(R.string.dialog_delete_msg, pkgName);
+        String btnConfirm = getString(R.string.btn_confirm);
+        String btnCancel = getString(R.string.btn_cancel);
+
         new AlertDialog.Builder(this)
-            .setTitle("Confirm Delete")
-            .setMessage("Remove " + pkgName + " from whitelist?")
-            .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+            .setTitle(title)
+            .setMessage(msg)
+            .setPositiveButton(btnConfirm, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     removePackage(pkgName);
                 }
             })
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(btnCancel, null)
             .show();
     }
 
     private void removePackage(String pkgName) {
         try {
-            // 调用 AIDL 移除
             boolean success = mService.removeFromWhitelist(pkgName);
             if (success) {
-                Toast.makeText(this, "Removed: " + pkgName, Toast.LENGTH_SHORT).show();
+                String msg = getString(R.string.toast_removed) + pkgName;
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
                 refreshWhitelist();
-            } else {
-                Toast.makeText(this, "Failed: Package not found", Toast.LENGTH_SHORT).show();
             }
         } catch (RemoteException e) {
             Log.e(TAG, "Error removing package", e);
@@ -160,7 +236,7 @@ public class MainActivity extends Activity {
     private void setMode(int mode) {
         try {
             mService.setVerificationMode(mode);
-            Toast.makeText(this, "Mode updated", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.toast_mode_updated, Toast.LENGTH_SHORT).show();
         } catch (RemoteException e) {
             Log.e(TAG, "Error setting mode", e);
         }
