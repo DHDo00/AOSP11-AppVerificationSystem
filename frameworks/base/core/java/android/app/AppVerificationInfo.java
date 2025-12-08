@@ -4,85 +4,63 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 /**
- * Application verification information containing the five-tuple:
- * (packageName, appName, developerKeyHash, versionCode, packageHash)
- * 
+ * 应用验证信息
  * @hide
  */
 public class AppVerificationInfo implements Parcelable {
-    public String packageName;
-    public String appName;
-    public String developerKeyHash;
-    public int versionCode;
-    public String versionName;
-    public String packageHash;
-    public long apkSize;
-    public long installTime;
-    public String installerPackage;
+    private String packageName;
+    private boolean isWhitelisted;
+    private boolean isSignatureValid;
+    private String signatureHash;
+    private long lastVerificationTime;
     
-    public AppVerificationInfo() {}
-    
-    public AppVerificationInfo(String packageName, String appName,
-                              String developerKeyHash, int versionCode,
-                              String packageHash) {
+    // 构造函数：必须与 Service 中的调用完全匹配
+    public AppVerificationInfo(String packageName, boolean isWhitelisted, 
+                               boolean isSignatureValid, String signatureHash) {
         this.packageName = packageName;
-        this.appName = appName;
-        this.developerKeyHash = developerKeyHash;
-        this.versionCode = versionCode;
-        this.packageHash = packageHash;
-        this.installTime = System.currentTimeMillis();
+        this.isWhitelisted = isWhitelisted;
+        this.isSignatureValid = isSignatureValid;
+        this.signatureHash = signatureHash;
+        this.lastVerificationTime = System.currentTimeMillis();
     }
     
+    // Getters
+    public String getPackageName() { return packageName; }
+    public boolean isWhitelisted() { return isWhitelisted; }
+    public boolean isSignatureValid() { return isSignatureValid; }
+    public String getSignatureHash() { return signatureHash; }
+    public long getLastVerificationTime() { return lastVerificationTime; }
+    
+    // Parcelable implementation
     protected AppVerificationInfo(Parcel in) {
         packageName = in.readString();
-        appName = in.readString();
-        developerKeyHash = in.readString();
-        versionCode = in.readInt();
-        versionName = in.readString();
-        packageHash = in.readString();
-        apkSize = in.readLong();
-        installTime = in.readLong();
-        installerPackage = in.readString();
+        isWhitelisted = in.readByte() != 0;
+        isSignatureValid = in.readByte() != 0;
+        signatureHash = in.readString();
+        lastVerificationTime = in.readLong();
     }
     
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(packageName);
-        dest.writeString(appName);
-        dest.writeString(developerKeyHash);
-        dest.writeInt(versionCode);
-        dest.writeString(versionName);
-        dest.writeString(packageHash);
-        dest.writeLong(apkSize);
-        dest.writeLong(installTime);
-        dest.writeString(installerPackage);
+        dest.writeByte((byte) (isWhitelisted ? 1 : 0));
+        dest.writeByte((byte) (isSignatureValid ? 1 : 0));
+        dest.writeString(signatureHash);
+        dest.writeLong(lastVerificationTime);
     }
     
     @Override
-    public int describeContents() {
-        return 0;
-    }
+    public int describeContents() { return 0; }
     
-    public static final Creator<AppVerificationInfo> CREATOR = 
-        new Creator<AppVerificationInfo>() {
-            @Override
-            public AppVerificationInfo createFromParcel(Parcel in) {
-                return new AppVerificationInfo(in);
-            }
-            
-            @Override
-            public AppVerificationInfo[] newArray(int size) {
-                return new AppVerificationInfo[size];
-            }
-        };
-    
-    @Override
-    public String toString() {
-        return "AppVerificationInfo{" +
-                "packageName='" + packageName + '\'' +
-                ", appName='" + appName + '\'' +
-                ", versionCode=" + versionCode +
-                ", installTime=" + installTime +
-                '}';
-    }
+    public static final Creator<AppVerificationInfo> CREATOR = new Creator<AppVerificationInfo>() {
+        @Override
+        public AppVerificationInfo createFromParcel(Parcel in) {
+            return new AppVerificationInfo(in);
+        }
+        
+        @Override
+        public AppVerificationInfo[] newArray(int size) {
+            return new AppVerificationInfo[size];
+        }
+    };
 }
