@@ -52,27 +52,41 @@ AOSP11-AppVerificationSystem/
             ├── service_contexts                # [安全] 服务上下文注册
             └── system_server.te                # [安全] 允许 system_server 添加服务
 
+## 📝 关键文件说明
 
-🛠️ 集成指南 (Integration)
-将本项目文件复制到 AOSP 源码对应目录（建议使用脚本集成）。
+### Framework 层 (核心逻辑)
+* **`AppVerificationManagerService.java`**:
+    * **核心逻辑**: 实现了 `verifyAppStart(String packageName)` 供 AMS 拦截调用。
+    * **数据初始化**: 包含 `loadDefaultWhitelistLocked()`，在首次启动时初始化默认应用（如 Settings, SystemUI）。
+    * **性能优化**: 使用 `HashSet` 和细粒度对象锁 (`mLock`) 保证高并发下的查询性能 (O(1) 复杂度)。
+    * **持久化**: 使用 `AtomicFile` 实现 XML 文件的原子性写入与读取。
+* **`IAppVerificationManager.aidl`**:
+    * 定义了跨进程接口 (IPC)：包含 `addToWhitelist`, `removeFromWhitelist`, `getWhitelistedApps`, `setVerificationMode` 等 8 个核心方法。
+* **`SystemServer.java`** (集成点):
+    * 系统启动入口，需在此文件的 `startOtherServices()` 阶段注册 `app_verification` 服务。
 
-在 SystemServer.java 中添加服务启动代码。
+### 应用层 (AppVerifyManager)
+* **`MainActivity.java`**:
+    * **服务连接**: 通过 `ServiceManager` 获取 Framework 层的 Binder 代理。
+    * **异步处理**: 使用后台线程 (`Thread`) 执行耗时的 `PackageManager` 全量扫描操作，配合 `ProgressDialog` 避免主线程阻塞。
+    * **交互逻辑**: 实现了全中文界面的事件响应、列表刷新与弹窗确认。
+* **`Android.bp`**:
+    * **权限配置**: 关键配置 `platform_apis: true` (允许调用隐藏 API) 和 `certificate: "platform"` (获取系统特权)。
 
-编译服务与应用：
+---
 
-source build/envsetup.sh
-lunch aosp_x86_64-eng
-m services
-m AppVerifyManager
-重新打包镜像或推送 services.jar 与 APK 到设备。
+## 🛠️ 集成指南 (Integration)
 
-📊 版本记录
-v1.0 (Release):
+### 1. 代码合并
+将本仓库文件复制到 AOSP 源码对应的目录中（建议使用 Overlay 方式或集成脚本）。
 
-完成核心拦截功能与 XML 持久化。
+### 2. 修改 SystemServer
+在 `frameworks/base/services/java/com/android/server/SystemServer.java` 的 `startOtherServices` 方法中（建议在 PackageManagerService 启动后）添加启动逻辑：
 
-适配全中文 UI。
-
-新增“扫描所有应用”与“清理失效条目”功能。
-
-修复主题兼容性问题。
+```java
+try {
+    Slog.i(TAG, "Starting App Verification Service");
+    ServiceManager.addService("app_verification", new AppVerificationManagerService(context));
+} catch (Throwable e) {
+    reportWtf("starting App Verification Service", e);
+}
