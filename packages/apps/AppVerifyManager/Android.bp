@@ -1,0 +1,29 @@
+android_app {
+    name: "AppVerifyManager",
+    
+    // 源码路径
+    srcs: ["src/**/*.java"],
+    
+    // 资源路径
+    resource_dirs: ["res"],
+    
+    // 【关键】允许使用系统隐藏 API (如 ServiceManager)
+    platform_apis: true,
+    
+    // 【关键】使用平台签名，这样才能获取 MANAGE_APP_VERIFICATION 权限
+    certificate: "platform",
+    
+    // 安装到 /system/priv-app/ 目录 (可选，但推荐)
+    privileged: true,
+    
+    // 引入常用 UI 库 (AOSP 自带)
+    static_libs: [
+        "androidx.appcompat_appcompat",
+        "com.google.android.material_material",
+    ],
+    
+    // 优化配置
+    optimize: {
+        enabled: false,
+    },
+}
