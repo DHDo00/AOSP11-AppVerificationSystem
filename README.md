@@ -91,7 +91,7 @@ try {
     reportWtf("starting App Verification Service", e);
 }
 ```
-### 3.修改 ActivityTaskManagerService (拦截点)
+### 3. 修改 ActivityTaskManagerService (拦截点)
 在'frameworks/base/services/core/java/com/android/server/wm/ActivityTaskManagerService.java'的'startActivity'流程中添加拦截：
 ```java
 // 伪代码示例
