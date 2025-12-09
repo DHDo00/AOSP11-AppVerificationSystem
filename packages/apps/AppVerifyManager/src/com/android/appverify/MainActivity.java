@@ -118,8 +118,11 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 PackageManager pm = getPackageManager();
-                List<ApplicationInfo> installedApps = pm.getInstalledApplications(0);
-                
+                List<ApplicationInfo> installedApps = pm.getInstalledApplications(
+				PackageManager.MATCH_UNINSTALLED_PACKAGES | PackageManager.GET_META_DATA);
+ 
+		Log.d(TAG, "DEBUG: Scanned total apps: " + installedApps.size());
+
                 int count = 0;
                 try {
                     List<String> currentWhitelist = mService.getWhitelistedApps();
