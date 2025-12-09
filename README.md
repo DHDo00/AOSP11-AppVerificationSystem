@@ -93,14 +93,14 @@ try {
 ```
 ### 3.修改 ActivityTaskManagerService (拦截点)
 在'frameworks/base/services/core/java/com/android/server/wm/ActivityTaskManagerService.java'的'startActivity'流程中添加拦截：
-'''java
+```java
 // 伪代码示例
 if (!AppVerificationManagerService.getInstance().verifyAppStart(r.packageName)) {
     throw new SecurityException("START_BLOCKED_BY_POLICY: " + r.packageName);
 }
 ```
 ### 4. 编译与部署
-'''shell
+```shell
 # 初始化环境
 source build/envsetup.sh
 lunch aosp_x86_64-eng
