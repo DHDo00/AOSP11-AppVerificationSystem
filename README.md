@@ -51,7 +51,7 @@ AOSP11-AppVerificationSystem/
             ├── app_verification_service.te     # [安全] SELinux 服务类型定义
             ├── service_contexts                # [安全] 服务上下文注册
             └── system_server.te                # [安全] 允许 system_server 添加服务
-
+```
 ## 📝 关键文件说明
 
 ### Framework 层 (核心逻辑)
@@ -90,17 +90,17 @@ try {
 } catch (Throwable e) {
     reportWtf("starting App Verification Service", e);
 }
-
-###3.修改 ActivityTaskManagerService (拦截点)
+```
+### 3.修改 ActivityTaskManagerService (拦截点)
 在'frameworks/base/services/core/java/com/android/server/wm/ActivityTaskManagerService.java'的'startActivity'流程中添加拦截：
 '''java
 // 伪代码示例
 if (!AppVerificationManagerService.getInstance().verifyAppStart(r.packageName)) {
     throw new SecurityException("START_BLOCKED_BY_POLICY: " + r.packageName);
 }
-
-###4. 编译与部署
-'''bash
+```
+### 4. 编译与部署
+'''shell
 # 初始化环境
 source build/envsetup.sh
 lunch aosp_x86_64-eng
@@ -114,8 +114,8 @@ adb root && adb remount
 adb push out/target/product/generic_x86_64/system/framework/services.jar /system/framework/
 adb push out/target/product/generic_x86_64/system/app/AppVerifyManager/AppVerifyManager.apk /system/priv-app/AppVerifyManager/
 adb reboot
-
-##📊 版本记录 (Changelog)
+```
+## 📊 版本记录 (Changelog)
 
 v1.0 (Release)
 ✅ 功能完成: 核心拦截服务稳定运行、XML 断电持久化存储验证通过。
