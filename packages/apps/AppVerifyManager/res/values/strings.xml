@@ -11,7 +11,7 @@
     <string name="btn_clean_invalid">删除失效条目</string>
     <string name="msg_importing">正在扫描导入...</string>
     <string name="msg_cleaning">正在清理失效条目...</string>
-    
+    <string name="btn_refresh">刷新列表</string>
     <string name="whitelist_title">白名单列表 (长按可删除)</string>
     
     <string name="toast_mode_updated">验证模式已更新</string>

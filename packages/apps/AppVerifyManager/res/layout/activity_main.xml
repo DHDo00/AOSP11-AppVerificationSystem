@@ -59,18 +59,52 @@
         android:layout_marginTop="10dp"
         android:layout_marginBottom="20dp">
 
-        <Button
-            android:id="@+id/btnImportAll"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/btn_import_all"
-            android:layout_marginBottom="5dp"/>
+            android:orientation="horizontal">
+            
+            <Button
+                android:id="@+id/btnImportAll"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/btn_import_all"
+                android:layout_marginEnd="2dp"/>
 
-        <Button
-            android:id="@+id/btnCleanInvalid"
+            <Button
+                android:id="@+id/btnCleanInvalid"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/btn_clean_invalid"
+                android:layout_marginStart="2dp"/>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/btn_clean_invalid"/>
+            android:orientation="horizontal"
+            android:layout_marginTop="5dp">
+
+            <Button
+                android:id="@+id/btnReview"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="事件审查 / 待办事项"
+                android:backgroundTint="#FF9800"
+                android:textColor="#FFF"
+                android:layout_marginEnd="2dp"/>
+
+            <Button
+                android:id="@+id/btnRefresh"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/btn_refresh"
+                android:layout_marginStart="2dp"/>
+        </LinearLayout>
     </LinearLayout>
 
     <View
