@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">应用验证管理</string>
+    <string name="app_name">应用完整性验证</string>
+
+    <string name="mode_enabled">保护状态：已开启</string>
+    <string name="mode_disabled">保护状态：已关闭</string>
+    <string name="desc_dashboard">系统自带应用已自动受保护且被隐藏，无需手动管理。</string>
+
+    <string name="btn_scan_add">添加应用</string>
+    <string name="btn_manage_whitelist">名单管理</string>
+    <string name="btn_review_events">事件审查</string>
+
+    <string name="search_hint">搜索应用名称或包名...</string>
     
-    <string name="mode_title">验证模式</string>
-    <string name="mode_disabled">禁用模式 (Disabled)</string>
-    <string name="mode_whitelist">启用模式 (Whitelist)</string>
-    
-    <string name="tools_title">批量管理</string>
-    <string name="btn_import_all">扫描添加所有应用</string>
-    <string name="btn_clean_invalid">删除失效条目</string>
-    <string name="msg_importing">正在扫描导入...</string>
-    <string name="msg_cleaning">正在清理失效条目...</string>
-    <string name="btn_refresh">刷新列表</string>
-    <string name="whitelist_title">白名单列表 (长按可删除)</string>
-    
-    <string name="toast_mode_updated">验证模式已更新</string>
-    <string name="toast_removed">已移除: </string>
-    <string name="toast_import_success">成功导入 %1$d 个应用</string>
-    <string name="toast_clean_success">成功清理 %1$d 个失效条目</string>
-    
-    <string name="dialog_delete_title">确认删除</string>
-    <string name="dialog_delete_msg">确定要将 %1$s 从白名单中移除吗？</string>
-    <string name="btn_confirm">删除</string>
+    <string name="dialog_delete_title">移出白名单</string>
+    <string name="dialog_delete_msg">确定要移除 %1$s 吗？\n移除后该应用可能无法启动。</string>
+    <string name="btn_confirm">确定</string>
     <string name="btn_cancel">取消</string>
+    
+    <string name="dialog_hash_title">完整性校验</string>
+    <string name="label_hash_value">应用校验值</string>
+    
+    <string name="btn_copy">复制</string>
+    <string name="btn_close">关闭</string>
+    <string name="toast_saved">已添加</string>
 </resources>

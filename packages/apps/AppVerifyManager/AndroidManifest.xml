@@ -4,9 +4,11 @@
 
     <uses-permission android:name="android.permission.MANAGE_APP_VERIFICATION" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
         android:label="@string/app_name"
+        android:icon="@android:drawable/ic_lock_idle_lock"
         android:theme="@android:style/Theme.DeviceDefault.Light">
 
         <activity android:name=".MainActivity">
@@ -17,22 +19,15 @@
         </activity>
 
         <activity android:name=".BlockActivity"
-            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar"
-            android:excludeFromRecents="true"
-            android:taskAffinity=""
-            android:launchMode="singleInstance" 
-            android:exported="true"/>
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar.Fullscreen"
+            android:exported="true"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"/>
 
-        <receiver android:name=".EventReceiver"
-            android:exported="true">
+        <activity android:name=".ReviewActivity" android:label="@string/btn_review_events"/> <activity android:name=".WhitelistActivity" android:label="@string/btn_manage_whitelist"/> <activity android:name=".AppSelectionActivity" android:label="@string/btn_scan_add"/> <receiver android:name=".EventReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="com.android.appverify.ACTION_EVENT" />
             </intent-filter>
         </receiver>
-
-        <activity android:name=".ReviewActivity"
-            android:label="事件审查"
-            android:theme="@android:style/Theme.DeviceDefault.Light" />
-
     </application>
 </manifest>

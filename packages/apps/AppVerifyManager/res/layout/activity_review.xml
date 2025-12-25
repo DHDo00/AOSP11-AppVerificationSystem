@@ -6,27 +6,45 @@
     android:padding="16dp">
 
     <TextView
-        android:layout_width="wrap_content"
+	android:id="@+id/tvPageTitle"    
+	android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="待处理事件"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginBottom="5dp"/>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="以下检测到系统安装/卸载事件，建议同步到白名单。"
+        android:text="勾选下方的事件进行批量同步处理。"
         android:textColor="#666666"
         android:textSize="12sp"
         android:layout_marginBottom="10dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginBottom="5dp">
+        
+        <Button
+            android:id="@+id/btnSelectAll"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="全选 / 反选"
+            android:textSize="12sp"/>
+    </LinearLayout>
 
     <ListView
         android:id="@+id/listReview"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginBottom="10dp"
+        android:dividerHeight="1dp"
+        android:divider="#EEEEEE"/>
 
     <Button
         android:id="@+id/btnProcess"

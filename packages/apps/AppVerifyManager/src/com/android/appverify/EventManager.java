@@ -75,4 +75,22 @@ public class EventManager {
         }
         saveEvents(context, events);
     }
+    /**
+     * [新增] 批量移除事件 (性能优化)
+     */
+    public static void removeEvents(Context context, List<String> packagesToRemove) {
+        if (packagesToRemove == null || packagesToRemove.isEmpty()) return;
+
+        List<AppEvent> events = getEvents(context);
+        List<AppEvent> newEvents = new ArrayList<>();
+
+        // 保留不在移除列表中的事件
+        for (AppEvent e : events) {
+            if (!packagesToRemove.contains(e.pkg)) {
+                newEvents.add(e);
+            }
+        }
+
+        saveEvents(context, newEvents);
+    }
 }
