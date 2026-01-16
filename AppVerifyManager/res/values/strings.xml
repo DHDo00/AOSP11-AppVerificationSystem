@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">应用完整性验证</string>
+
+    <string name="mode_enabled">保护状态：已开启</string>
+    <string name="mode_disabled">保护状态：已关闭</string>
+
+    <string name="empty_whitelist">暂无受保护应用，请点击下方“扫描”添加。</string>
+
+    <string name="btn_scan_all">扫描</string>
+    <string name="btn_events">安装/卸载</string>
+
+    <string name="btn_scan_add">添加应用</string>
+    <string name="btn_manage_whitelist">名单管理</string>
+    <string name="btn_review_events">事件审查</string>
+    
+    <string name="dialog_delete_title">移出白名单</string>
+    <string name="dialog_delete_msg">确定要移除 %1$s 吗？\n移除后该应用可能无法启动。</string>
+    <string name="btn_confirm">确定</string>
+    <string name="btn_cancel">取消</string>
+    
+    <string name="dialog_hash_title">完整性校验</string>
+    <string name="label_hash_value">应用校验值</string>
+    <string name="btn_copy">复制</string>
+    <string name="btn_close">关闭</string>
+    <string name="toast_saved">已添加</string>
+    <string name="search_hint">搜索应用名称或包名...</string>
+    <string name="desc_dashboard">系统自带应用已自动受保护且被隐藏，无需手动管理。</string>
+</resources>
