@@ -1,26 +1,26 @@
 package com.android.appverify;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.IAppVerificationManager;
 import android.content.Context;
-import android.content.pm.ApplicationInfo;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.os.ServiceManager;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.BaseAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -30,226 +30,201 @@ import java.util.Locale;
 
 public class ReviewActivity extends Activity {
 
-    private static final String TAG = "AppVerifyReview";
+    private static final String PREF_NAME = "AppVerifyEvents";
+    private static final String KEY_EVENTS = "event_list";
+
+    private IAppVerificationManager mService; // 增加服务连接
     private ListView mListView;
-    private IAppVerificationManager mService;
-    private ReviewAdapter mAdapter;
-    private List<EventItem> mEventItems = new ArrayList<>();
-    private boolean mIsAllSelected = false;
-
-    // 视图模型：包含 UI 显示所需的所有信息
-    private static class EventItem {
-        EventManager.AppEvent rawEvent;
-        String appName;
-        Drawable icon;
-        boolean isChecked;
-
-        public EventItem(EventManager.AppEvent rawEvent) {
-            this.rawEvent = rawEvent;
-            this.isChecked = false; // 默认不勾选
-        }
-    }
+    private View mLayoutEmpty;
+    private EventAdapter mAdapter;
+    private List<EventItem> mData = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_review);
 
-        connectToService();
+        // 连接服务，用于后续操作白名单
+        mService = IAppVerificationManager.Stub.asInterface(
+                ServiceManager.getService("app_verification"));
 
-        mListView = findViewById(R.id.listReview);
-        Button btnProcess = findViewById(R.id.btnProcess);
-        Button btnSelectAll = findViewById(R.id.btnSelectAll);
+        initViews();
+    }
 
-        mAdapter = new ReviewAdapter(this, mEventItems);
-        mListView.setAdapter(mAdapter);
-
-        // 点击条目切换勾选状态
-        mListView.setOnItemClickListener((parent, view, position, id) -> {
-            EventItem item = mEventItems.get(position);
-            item.isChecked = !item.isChecked;
-            mAdapter.notifyDataSetChanged();
-        });
-
-        // 全选/反选 按钮
-        btnSelectAll.setOnClickListener(v -> {
-            mIsAllSelected = !mIsAllSelected;
-            for (EventItem item : mEventItems) {
-                item.isChecked = mIsAllSelected;
-            }
-            mAdapter.notifyDataSetChanged();
-        });
-
-        // 处理按钮
-        btnProcess.setOnClickListener(v -> processSelectedEvents());
-
+    @Override
+    protected void onResume() {
+        super.onResume();
         loadEvents();
     }
 
-    private void connectToService() {
-        mService = IAppVerificationManager.Stub.asInterface(
-                ServiceManager.getService("app_verification"));
+    private void initViews() {
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+
+        mListView = findViewById(R.id.listEvents);
+        mLayoutEmpty = findViewById(R.id.layoutEmpty);
+        mAdapter = new EventAdapter();
+        mListView.setAdapter(mAdapter);
+
+        // 【核心功能】点击列表项，查看详情并处理
+        mListView.setOnItemClickListener((parent, view, position, id) -> {
+            EventItem item = mData.get(position);
+            showActionDialog(item);
+        });
+
+        findViewById(R.id.btnClear).setOnClickListener(v -> clearEvents());
     }
 
-    private void loadEvents() {
-        final List<EventManager.AppEvent> rawEvents = EventManager.getEvents(this);
+    /**
+     * 显示详情与操作弹窗
+     */
+    private void showActionDialog(EventItem item) {
+        String versionStr = "未知 (已卸载或无法获取)";
         
-        if (rawEvents.isEmpty()) {
-            Toast.makeText(this, "暂无待处理事件", Toast.LENGTH_SHORT).show();
-            return;
+        // 尝试获取版本号
+        try {
+            PackageManager pm = getPackageManager();
+            PackageInfo pi = pm.getPackageInfo(item.pkg, 0);
+            versionStr = pi.versionName + " (" + pi.versionCode + ")";
+        } catch (PackageManager.NameNotFoundException e) {
+            // 如果是卸载事件，应用可能已经不在了，这是正常的
         }
 
-        // 异步加载图标和名称，防止卡顿
-        new Thread(() -> {
-            PackageManager pm = getPackageManager();
-            List<EventItem> loadedItems = new ArrayList<>();
+        String message = "应用名称: " + item.name + "\n" +
+                         "应用包名: " + item.pkg + "\n" +
+                         "当前版本: " + versionStr + "\n\n" +
+                         "事件类型: " + (item.type == 1 ? "应用安装" : "应用卸载");
 
-            for (EventManager.AppEvent event : rawEvents) {
-                EventItem item = new EventItem(event);
-                
-                // 处理图标和名称
-                if ("UNINSTALL".equals(event.type)) {
-                    // 已卸载的应用，无法获取图标和名称，只能显示包名
-                    item.appName = event.pkg + " (已卸载)";
-                    item.icon = getDrawable(android.R.drawable.sym_def_app_icon); // 默认图标
-                } else {
-                    // 安装或更新，尝试获取真实信息
-                    try {
-                        ApplicationInfo ai = pm.getApplicationInfo(event.pkg, 0);
-                        item.appName = pm.getApplicationLabel(ai).toString();
-                        item.icon = pm.getApplicationIcon(ai);
-                    } catch (PackageManager.NameNotFoundException e) {
-                        // 可能发生的情况：刚收到安装通知，但解析时又卸载了，或者获取失败
-                        item.appName = event.pkg + " (未知)";
-                        item.icon = getDrawable(android.R.drawable.sym_def_app_icon);
-                    }
-                }
-                loadedItems.add(item);
-            }
+        String btnText;
+        // 根据事件类型决定按钮功能
+        if (item.type == 1) {
+            btnText = "加入受保护列表"; // 安装 -> 建议加入
+        } else {
+            btnText = "从受保护列表移除"; // 卸载 -> 建议移除
+        }
 
-            runOnUiThread(() -> {
-                mEventItems.clear();
-                mEventItems.addAll(loadedItems);
-                mAdapter.notifyDataSetChanged();
-                Log.d(TAG, "Loaded " + mEventItems.size() + " items.");
-            });
-        }).start();
+        new AlertDialog.Builder(this)
+                .setTitle("事件详情与处置")
+                .setMessage(message)
+                .setPositiveButton(btnText, (dialog, which) -> {
+                    processEventAction(item);
+                })
+                .setNegativeButton("关闭", null)
+                .show();
     }
 
-    private void processSelectedEvents() {
-        if (mService == null) connectToService();
+    /**
+     * 执行添加或移除白名单的操作
+     */
+    private void processEventAction(EventItem item) {
         if (mService == null) {
             Toast.makeText(this, "服务未连接", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        List<String> processedPackages = new ArrayList<>();
-        int count = 0;
-
-        for (EventItem item : mEventItems) {
-            if (!item.isChecked) continue; // 只处理勾选的
-
-            String pkg = item.rawEvent.pkg;
-            String type = item.rawEvent.type;
-
-            try {
-                if ("INSTALL".equals(type) || "UPDATE".equals(type)) {
-                    Log.d(TAG, "Adding: " + pkg);
-                    mService.addToWhitelist(pkg);
-                } else if ("UNINSTALL".equals(type)) {
-                    Log.d(TAG, "Removing: " + pkg);
-                    mService.removeFromWhitelist(pkg);
-                }
-                processedPackages.add(pkg);
-                count++;
-            } catch (RemoteException e) {
-                Log.e(TAG, "Failed to process " + pkg, e);
+        try {
+            if (item.type == 1) {
+                // 安装事件 -> 加白
+                mService.addAppToWhitelist(item.pkg);
+                Toast.makeText(this, "已加入受保护列表", Toast.LENGTH_SHORT).show();
+            } else {
+                // 卸载事件 -> 移出
+                mService.removeAppFromWhitelist(item.pkg);
+                Toast.makeText(this, "已从受保护列表移除", Toast.LENGTH_SHORT).show();
             }
-        }
-
-        if (count > 0) {
-            // 批量从数据库移除记录
-            EventManager.removeEvents(this, processedPackages);
-            Toast.makeText(this, "已同步处理 " + count + " 个应用", Toast.LENGTH_SHORT).show();
-            loadEvents(); // 重新加载列表
-        } else {
-            Toast.makeText(this, "请先勾选需要处理的事件", Toast.LENGTH_SHORT).show();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "操作失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
-    // 自定义 Adapter
-    private class ReviewAdapter extends BaseAdapter {
-        private Context context;
-        private List<EventItem> items;
-        private LayoutInflater inflater;
+    private void loadEvents() {
+        mData.clear();
+        SharedPreferences sp = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        String jsonStr = sp.getString(KEY_EVENTS, "[]");
 
-        public ReviewAdapter(Context context, List<EventItem> items) {
-            this.context = context;
-            this.items = items;
-            this.inflater = LayoutInflater.from(context);
+        try {
+            JSONArray jsonArray = new JSONArray(jsonStr);
+            for (int i = jsonArray.length() - 1; i >= 0; i--) {
+                JSONObject obj = jsonArray.getJSONObject(i);
+                EventItem item = new EventItem();
+                item.pkg = obj.optString("pkg");
+                item.name = obj.optString("name");
+                item.type = obj.optInt("type");
+                item.time = obj.optLong("time");
+                mData.add(item);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        @Override
-        public int getCount() { return items.size(); }
-        @Override
-        public Object getItem(int position) { return items.get(position); }
-        @Override
-        public long getItemId(int position) { return position; }
+        mAdapter.notifyDataSetChanged();
+        
+        if (mData.isEmpty()) {
+            mLayoutEmpty.setVisibility(View.VISIBLE);
+            mListView.setVisibility(View.GONE);
+        } else {
+            mLayoutEmpty.setVisibility(View.GONE);
+            mListView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void clearEvents() {
+        SharedPreferences sp = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        sp.edit().remove(KEY_EVENTS).apply();
+        loadEvents();
+        Toast.makeText(this, "记录已清除", Toast.LENGTH_SHORT).show();
+    }
+
+    // ==========================================
+    
+    static class EventItem {
+        String name;
+        String pkg;
+        int type; // 1=Install, 2=Remove
+        long time;
+    }
+
+    class EventAdapter extends BaseAdapter {
+        private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+
+        @Override public int getCount() { return mData.size(); }
+        @Override public Object getItem(int position) { return mData.get(position); }
+        @Override public long getItemId(int position) { return position; }
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            ViewHolder holder;
             if (convertView == null) {
-                convertView = inflater.inflate(R.layout.item_event, parent, false);
-                holder = new ViewHolder();
-                holder.checkBox = convertView.findViewById(R.id.cbSelect);
-                holder.icon = convertView.findViewById(R.id.imgIcon);
-                holder.tvTitle = convertView.findViewById(R.id.tvTitle);
-                holder.tvSubtitle = convertView.findViewById(R.id.tvSubtitle);
-                convertView.setTag(holder);
+                convertView = LayoutInflater.from(ReviewActivity.this)
+                        .inflate(R.layout.item_event, parent, false);
+            }
+
+            EventItem item = mData.get(position);
+
+            TextView tvName = convertView.findViewById(R.id.tvAppName);
+            TextView tvPkg = convertView.findViewById(R.id.tvPkgName);
+            TextView tvTime = convertView.findViewById(R.id.tvTime);
+            TextView tvType = convertView.findViewById(R.id.tvType);
+            ImageView imgStatus = convertView.findViewById(R.id.imgStatus);
+
+            tvName.setText(item.name);
+            tvPkg.setText(item.pkg);
+            tvTime.setText(sdf.format(new Date(item.time)));
+
+            if (item.type == 1) {
+                tvType.setText("安装");
+                tvType.setTextColor(0xFF4CAF50);
+                tvType.setBackgroundColor(0x104CAF50); // 浅绿色背景
+                imgStatus.setImageResource(android.R.drawable.stat_sys_download);
+                imgStatus.setColorFilter(0xFF4CAF50);
             } else {
-                holder = (ViewHolder) convertView.getTag();
+                tvType.setText("卸载");
+                tvType.setTextColor(0xFFFF5722);
+                tvType.setBackgroundColor(0x10FF5722); // 浅橙色背景
+                imgStatus.setImageResource(android.R.drawable.ic_delete);
+                imgStatus.setColorFilter(0xFFFF5722);
             }
-
-            EventItem item = items.get(position);
-
-            // 设置复选框
-            holder.checkBox.setChecked(item.isChecked);
-
-            // 设置图标
-            holder.icon.setImageDrawable(item.icon);
-
-            // 构造标题：[类型] 应用名
-            String typeStr = "";
-            int typeColor = 0xFF000000; // 默认黑色
-            
-            if ("INSTALL".equals(item.rawEvent.type)) {
-                typeStr = "[新安装] ";
-                typeColor = 0xFF4CAF50; // 绿色
-            } else if ("UPDATE".equals(item.rawEvent.type)) {
-                typeStr = "[更新] ";
-                typeColor = 0xFF2196F3; // 蓝色
-            } else if ("UNINSTALL".equals(item.rawEvent.type)) {
-                typeStr = "[卸载] ";
-                typeColor = 0xFFF44336; // 红色
-            }
-
-            holder.tvTitle.setText(typeStr + item.appName);
-            // 这里可以简单用 SpannableString 给前缀上色，为了简化代码未展示
-
-            // 构造副标题：包名 | 时间
-            String dateStr = new SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
-                    .format(new Date(item.rawEvent.time));
-            holder.tvSubtitle.setText(item.rawEvent.pkg + "  |  " + dateStr);
 
             return convertView;
-        }
-
-        class ViewHolder {
-            CheckBox checkBox;
-            ImageView icon;
-            TextView tvTitle;
-            TextView tvSubtitle;
         }
     }
 }

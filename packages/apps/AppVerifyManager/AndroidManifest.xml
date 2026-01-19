@@ -24,10 +24,14 @@
             android:launchMode="singleInstance"
             android:excludeFromRecents="true"/>
 
-        <activity android:name=".ReviewActivity" android:label="@string/btn_review_events"/> <activity android:name=".WhitelistActivity" android:label="@string/btn_manage_whitelist"/> <activity android:name=".AppSelectionActivity" android:label="@string/btn_scan_add"/> <receiver android:name=".EventReceiver" android:exported="true">
+        <activity android:name=".ReviewActivity" android:label="@string/btn_review_events"/>
+        <activity android:name=".AppSelectionActivity" android:label="@string/btn_scan_add"/>
+        
+        <receiver android:name=".EventReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="com.android.appverify.ACTION_EVENT" />
             </intent-filter>
         </receiver>
+
     </application>
 </manifest>

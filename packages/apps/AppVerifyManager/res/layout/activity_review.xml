@@ -1,57 +1,94 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="#F5F7FA">
 
-    <TextView
-	android:id="@+id/tvPageTitle"    
-	android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="待处理事件"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="5dp"/>
-
-    <TextView
+    <RelativeLayout
+        android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="勾选下方的事件进行批量同步处理。"
-        android:textColor="#666666"
-        android:textSize="12sp"
-        android:layout_marginBottom="10dp"/>
+        android:background="#FFFFFF"
+        android:elevation="2dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        android:paddingHorizontal="16dp">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_arrow_back"
+            android:tint="#333333"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:layout_centerVertical="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="事件审查记录"
+            android:textColor="#333333"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_toEndOf="@id/btnBack"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="12dp"/>
+        
+        </RelativeLayout>
 
     <LinearLayout
+        android:id="@+id/layoutBottom"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end"
-        android:layout_marginBottom="5dp">
-        
+        android:layout_alignParentBottom="true"
+        android:padding="16dp"
+        android:background="#F5F7FA">
+
         <Button
-            android:id="@+id/btnSelectAll"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:text="全选 / 反选"
-            android:textSize="12sp"/>
+            android:id="@+id/btnClear"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="清除所有记录"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_btn_blue_rounded"/>
     </LinearLayout>
 
     <ListView
-        android:id="@+id/listReview"
+        android:id="@+id/listEvents"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginBottom="10dp"
-        android:dividerHeight="1dp"
-        android:divider="#EEEEEE"/>
+        android:layout_height="match_parent"
+        android:layout_below="@id/layoutHeader"
+        android:layout_above="@id/layoutBottom"
+        android:divider="@null"
+        android:dividerHeight="8dp"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:clipToPadding="false"/>
 
-    <Button
-        android:id="@+id/btnProcess"
+    <LinearLayout
+        android:id="@+id/layoutEmpty"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="同步处理选中项"
-        android:backgroundTint="#2196F3"
-        android:textColor="#FFFFFF"/>
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+        
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_select_all"
+            android:tint="#CCCCCC"/>
+            
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="暂无审查记录"
+            android:textColor="#999999"
+            android:layout_marginTop="12dp"/>
+    </LinearLayout>
 
-</LinearLayout>
+</RelativeLayout>

@@ -4,47 +4,60 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:padding="10dp"
-    android:background="?android:attr/selectableItemBackground">
-
-    <CheckBox
-        android:id="@+id/cbSelect"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:focusable="false"
-        android:clickable="false" />
-
+    android:padding="16dp"
+    android:background="@drawable/bg_search_bar" 
+    android:layout_marginBottom="4dp">
     <ImageView
-        android:id="@+id/imgIcon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginStart="8dp"
-        android:src="@android:drawable/sym_def_app_icon"/>
+        android:id="@+id/imgStatus"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@android:drawable/stat_sys_download"
+        android:tint="#FF9800"/>
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:layout_marginStart="12dp">
+        android:layout_marginStart="16dp">
 
         <TextView
-            android:id="@+id/tvTitle"
-            android:layout_width="match_parent"
+            android:id="@+id/tvAppName"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="[安装] 微信"
             android:textSize="16sp"
+            android:textColor="#333333"
             android:textStyle="bold"
-            android:textColor="#000000"/>
+            android:maxLines="1"
+            android:ellipsize="end"/>
 
         <TextView
-            android:id="@+id/tvSubtitle"
-            android:layout_width="match_parent"
+            android:id="@+id/tvPkgName"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="com.tencent.mm | 12-24 10:00"
             android:textSize="12sp"
-            android:textColor="#666666"
+            android:textColor="#999999"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+            
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textColor="#BBBBBB"
             android:layout_marginTop="2dp"/>
     </LinearLayout>
+    
+    <TextView
+        android:id="@+id/tvType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Install"
+        android:textSize="12sp"
+        android:textColor="#2196F3"
+        android:background="#102196F3"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"/>
 
 </LinearLayout>

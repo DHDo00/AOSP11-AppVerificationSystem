@@ -17,11 +17,11 @@ android_app {
     privileged: true,
     
     // 引入常用 UI 库 (AOSP 自带)
-    static_libs: [
+   static_libs: [
         "androidx.appcompat_appcompat",
-        "com.google.android.material_material",
-    ],
-    
+        "com.google.android.material_material",       // 修复 MaterialButton 报错
+        "androidx.cardview_cardview",
+    ], 
     // 优化配置
     optimize: {
         enabled: false,

@@ -2,178 +2,201 @@ package com.android.appverify;
 
 import android.app.Activity;
 import android.app.IAppVerificationManager;
-import android.app.ProgressDialog;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 public class AppSelectionActivity extends Activity {
 
-    private ListView mListView;
-    private SelectAdapter mAdapter;
-    private List<SelectItem> mItems = new ArrayList<>();
     private IAppVerificationManager mService;
-
-    static class SelectItem {
-        ApplicationInfo info;
-        String label;
-        boolean isChecked;
-    }
+    private ListView mListView;
+    private EditText mEtSearch;
+    private View mBtnSelectAll;
+    private ProgressBar mLoadingProgress;
+    private AppAdapter mAdapter;
+    
+    private List<AppInfo> mAllApps = new ArrayList<>();
+    private List<AppInfo> mData = new ArrayList<>();
+    private boolean mIsAllSelected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // 复用 review 的布局
-        setContentView(R.layout.activity_review);
+        setContentView(R.layout.activity_app_selection);
 
         mService = IAppVerificationManager.Stub.asInterface(
                 ServiceManager.getService("app_verification"));
 
-        // 1. 初始化视图控件
-        Button btnProcess = findViewById(R.id.btnProcess);
-        Button btnSelectAll = findViewById(R.id.btnSelectAll);
-        ListView mListView = findViewById(R.id.listReview);
-        TextView tvTitle = findViewById(R.id.tvPageTitle); // 获取我们在XML里新命名的ID
+        initViews();
+        loadInstalledApps();
+    }
 
-        // 2. 修改界面文案 (适配 "添加应用" 的场景)
-        // 标题设为 "添加应用" (复用 strings.xml 里的资源，保持统一)
-        if (tvTitle != null) {
-            tvTitle.setText(R.string.btn_scan_add); 
-        }
-        
-        // 按钮设为 "确认添加"
-        btnProcess.setText("确认添加");
+    private void initViews() {
+        // 返回按钮
+        View btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
 
-        // 3. 设置 Adapter
-        mAdapter = new SelectAdapter();
+        // 列表
+        mListView = findViewById(R.id.listApps);
+        mLoadingProgress = findViewById(R.id.loadingProgress);
+        mAdapter = new AppAdapter();
         mListView.setAdapter(mAdapter);
 
-        // 4. 加载数据
-        loadInstalledApps();
-
-        // 5. 设置监听器
-        btnSelectAll.setOnClickListener(v -> {
-            boolean select = !isAllSelected();
-            for (SelectItem i : mItems) i.isChecked = select;
+        // 点击 Item 勾选
+        mListView.setOnItemClickListener((parent, view, position, id) -> {
+            AppInfo item = mData.get(position);
+            item.isChecked = !item.isChecked;
             mAdapter.notifyDataSetChanged();
         });
 
-        btnProcess.setOnClickListener(v -> addSelectedApps());
-    }
-    private boolean isAllSelected() {
-        for (SelectItem i : mItems) if (!i.isChecked) return false;
-        return !mItems.isEmpty();
+        // 确认按钮
+        View btnConfirm = findViewById(R.id.btnConfirm);
+        if (btnConfirm != null) btnConfirm.setOnClickListener(v -> confirmSelection());
+
+        // 搜索框
+        mEtSearch = findViewById(R.id.etSearch);
+        mEtSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) { filterApps(s.toString()); }
+        });
+
+        // 全选
+        mBtnSelectAll = findViewById(R.id.btnSelectAll);
+        if (mBtnSelectAll != null) mBtnSelectAll.setOnClickListener(v -> toggleSelectAll());
     }
 
     private void loadInstalledApps() {
-        final ProgressDialog pd = ProgressDialog.show(this, "扫描中", "正在筛选第三方应用...", true);
+        if (mLoadingProgress != null) mLoadingProgress.setVisibility(View.VISIBLE);
+        
         new Thread(() -> {
             PackageManager pm = getPackageManager();
             List<ApplicationInfo> installed = pm.getInstalledApplications(0);
             
-            Set<String> whitelist = new HashSet<>();
+            Map currentWhitelist = null;
             try {
-                if (mService != null) whitelist.addAll(mService.getWhitelistedApps());
-            } catch (RemoteException e) {}
+                if (mService != null) currentWhitelist = mService.getWhitelist();
+            } catch (RemoteException e) { e.printStackTrace(); }
 
-            List<SelectItem> temp = new ArrayList<>();
-            for (ApplicationInfo app : installed) {
-                // 1. 严格过滤系统应用
-                if ((app.flags & ApplicationInfo.FLAG_SYSTEM) != 0 || 
-                    (app.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0) {
-                    continue;
-                }
-                // 2. 过滤已添加的
-                if (whitelist.contains(app.packageName)) continue;
-                // 3. 过滤自己
-                if (getPackageName().equals(app.packageName)) continue;
+            List<AppInfo> tempList = new ArrayList<>();
+            for (ApplicationInfo info : installed) {
+                // 排除系统应用和自己
+                if ((info.flags & ApplicationInfo.FLAG_SYSTEM) != 0) continue;
+                if (getPackageName().equals(info.packageName)) continue;
+                if (currentWhitelist != null && currentWhitelist.containsKey(info.packageName)) continue;
 
-                SelectItem item = new SelectItem();
-                item.info = app;
-                item.label = pm.getApplicationLabel(app).toString();
-                item.isChecked = false;
-                temp.add(item);
+                AppInfo app = new AppInfo();
+                app.name = info.loadLabel(pm).toString();
+                app.pkg = info.packageName;
+                app.icon = info.loadIcon(pm);
+                app.isChecked = false;
+                tempList.add(app);
             }
 
-            runOnUiThread(() -> {
-                pd.dismiss();
-                mItems = temp;
+            Collections.sort(tempList, (o1, o2) -> o1.name.compareToIgnoreCase(o2.name));
+
+            new Handler(Looper.getMainLooper()).post(() -> {
+                mAllApps.clear();
+                mAllApps.addAll(tempList);
+                mData.clear();
+                mData.addAll(tempList);
                 mAdapter.notifyDataSetChanged();
-                if (mItems.isEmpty()) Toast.makeText(this, "没有可添加的应用", Toast.LENGTH_SHORT).show();
+                if (mLoadingProgress != null) mLoadingProgress.setVisibility(View.GONE);
             });
         }).start();
     }
 
-    private void addSelectedApps() {
-        if (mService == null) return;
-        new Thread(() -> {
-            int count = 0;
-            for (SelectItem item : mItems) {
-                if (item.isChecked) {
-                    try {
-                        mService.addToWhitelist(item.info.packageName);
-                        count++;
-                    } catch (RemoteException e) {}
+    private void filterApps(String query) {
+        mData.clear();
+        if (query == null || query.isEmpty()) {
+            mData.addAll(mAllApps);
+        } else {
+            String lowerQuery = query.toLowerCase();
+            for (AppInfo app : mAllApps) {
+                if (app.name.toLowerCase().contains(lowerQuery) || app.pkg.toLowerCase().contains(lowerQuery)) {
+                    mData.add(app);
                 }
             }
-            final int finalCount = count;
-            runOnUiThread(() -> {
-                Toast.makeText(this, "已添加 " + finalCount + " 个应用", Toast.LENGTH_SHORT).show();
-                finish();
-            });
-        }).start();
+        }
+        mAdapter.notifyDataSetChanged();
     }
 
-    private class SelectAdapter extends BaseAdapter {
-        @Override
-        public int getCount() { return mItems.size(); }
-        @Override
-        public Object getItem(int position) { return mItems.get(position); }
-        @Override
-        public long getItemId(int position) { return position; }
+    private void toggleSelectAll() {
+        mIsAllSelected = !mIsAllSelected;
+        for (AppInfo app : mData) app.isChecked = mIsAllSelected;
+        mAdapter.notifyDataSetChanged();
+    }
+
+    private void confirmSelection() {
+        int count = 0;
+        try {
+            if (mService != null) {
+                for (AppInfo app : mAllApps) {
+                    if (app.isChecked) {
+                        mService.addAppToWhitelist(app.pkg);
+                        count++;
+                    }
+                }
+                Toast.makeText(this, "成功添加 " + count + " 个应用", Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK); // 告诉主页刷新
+                finish();
+            }
+        } catch (RemoteException e) {
+            Toast.makeText(this, "添加失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    static class AppInfo {
+        String name;
+        String pkg;
+        Drawable icon;
+        boolean isChecked;
+    }
+
+    class AppAdapter extends BaseAdapter {
+        @Override public int getCount() { return mData.size(); }
+        @Override public Object getItem(int position) { return mData.get(position); }
+        @Override public long getItemId(int position) { return position; }
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            // 复用 item_event.xml (带CheckBox的布局)
             if (convertView == null) {
                 convertView = LayoutInflater.from(AppSelectionActivity.this)
-                        .inflate(R.layout.item_event, parent, false);
+                        .inflate(R.layout.item_app_selection, parent, false);
             }
-            SelectItem item = mItems.get(position);
-            PackageManager pm = getPackageManager();
-
+            AppInfo item = mData.get(position);
+            
+            ((ImageView) convertView.findViewById(R.id.imgIcon)).setImageDrawable(item.icon);
+            ((TextView) convertView.findViewById(R.id.tvName)).setText(item.name);
+            ((TextView) convertView.findViewById(R.id.tvPkg)).setText(item.pkg);
+            
             CheckBox cb = convertView.findViewById(R.id.cbSelect);
-            ImageView icon = convertView.findViewById(R.id.imgIcon);
-            TextView title = convertView.findViewById(R.id.tvTitle);
-            TextView sub = convertView.findViewById(R.id.tvSubtitle);
-
+            cb.setVisibility(View.VISIBLE); // 必须显示
             cb.setChecked(item.isChecked);
-            icon.setImageDrawable(item.info.loadIcon(pm));
-            title.setText(item.label);
-            sub.setText(item.info.packageName);
-
-            convertView.setOnClickListener(v -> {
-                item.isChecked = !item.isChecked;
-                cb.setChecked(item.isChecked);
-            });
-            cb.setOnClickListener(v -> item.isChecked = cb.isChecked());
 
             return convertView;
         }

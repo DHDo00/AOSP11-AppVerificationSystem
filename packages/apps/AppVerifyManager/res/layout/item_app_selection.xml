@@ -4,8 +4,9 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:padding="16dp"
-    android:background="?android:attr/selectableItemBackground">
+    android:padding="12dp"
+    android:background="@drawable/bg_search_bar"
+    android:layout_marginBottom="4dp">
     <ImageView
         android:id="@+id/imgIcon"
         android:layout_width="48dp"
@@ -38,11 +39,11 @@
             android:maxLines="1"
             android:ellipsize="end"/>
     </LinearLayout>
-    
-    <ImageView
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:src="@drawable/ic_search" 
-        android:tint="#E0E0E0"
-        android:rotation="180"/> 
-    </LinearLayout>
+
+    <CheckBox
+        android:id="@+id/cbSelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:focusable="false"
+        android:clickable="false"/>
+        </LinearLayout>
